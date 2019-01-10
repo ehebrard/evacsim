@@ -12,6 +12,12 @@ pip install networkx
 2/ install quadtree
 python setup.py install [--prefix "some place where PYTHONPATH points to and where you have write permissions"] 
 	
+	
+Example:
+
+python generator.py --road test --printroad
+python generator.py test --evacuation --printfire
+
 
 FORMAT:
 
