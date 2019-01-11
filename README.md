@@ -32,4 +32,4 @@ capacity_m k_m i_1_m offset_i_1_m ... i_k_m offset_i_k_m
 
 n is the number of evacuation nodes
 m is the number of relevant transit arcs
-capacity_i is the capacity of the transit arc, and offset_i_x_y is the date at which population i_x_y reaches this arc if it starts at time 0
+capacity_y is the capacity of transit arc y, k_y is the number of population groups transiting by this arc and offset_i_x_y is the date at which population group i_x_y reaches this arc if starting at time 0
