@@ -21,7 +21,11 @@ import argparse
  
   
 def print_to_file(G, fichier):
-    nx.write_edgelist(G, path=fichier, delimiter=" ")  
+    ofile = open(fichier, 'w')
+    ofile.write('c %i nodes %i edges | format: edge list with <1st vertex> <2nd vertex> <duedate> <length> <capacity>\n'%(len(G.nodes), len(G.edges)))
+    for u,v in G.edges:
+        ofile.write('%i %i %i %f %f\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
+        # print u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']
   
 
 def generate_road_network(limit=800, size=1000):
