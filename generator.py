@@ -529,10 +529,10 @@ if __name__ == '__main__':
     parser.add_argument('--seed',type=int,default=12345,help='Random seed')
 
 
-    parser.add_argument('--printfire', default=False, action='store_true')
-    parser.add_argument('--printroad', default=False, action='store_true')
-    parser.add_argument('--printevac', default=False, action='store_true')
-    parser.add_argument('--tofile', default=False, action='store_true')
+    parser.add_argument('--printfire', default=False, action='store_true', help='show the fire simulation')
+    parser.add_argument('--printroad', default=False, action='store_true', help='show the road network')
+    parser.add_argument('--printevac', default=False, action='store_true', help='show the evac simulation')
+    parser.add_argument('--tofile', default=False, action='store_true', help='print the graph in a readable format')
     
 
     
