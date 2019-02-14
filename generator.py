@@ -20,13 +20,23 @@ import cPickle
 import argparse
  
   
-def print_to_file(G, fichier):
-    ofile = open(fichier, 'w')
-    ofile.write('c %i nodes %i edges | format: edge list with <1st vertex> <2nd vertex> <duedate> <length> <capacity>\n'%(len(G.nodes), len(G.edges)))
+def print_graph(G, fichier):
+    ofile = open(fichier, 'a')
+    ofile.write('c [graph] format: header with <num nodes> <num edges> then one line per edge <node 1> <node 2> <duedate> <length> <capacity>\n%i %i\n'%(len(G.nodes), len(G.edges)))
     for u,v in G.edges:
         ofile.write('%i %i %i %f %f\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
         # print u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']
+    ofile.close()
   
+def print_full_evac(evacuation_nodes, population, maximum_rate, safe_zone, fichier):
+    outfile = open(fichier, 'w+')
+    outfile.write('c [evacuation info] format: header with <num evac nodes> <id of safe node> then one line per evac node with <id of the node> <population> <max rate>\n')
+    outfile.write('%i %i\n'%(len(evacuation_nodes), safe_zone))
+    for i,e in enumerate(evacuation_nodes):
+        outfile.write('%i %i %i\n'%(e, population[i], maximum_rate[i]))
+    outfile.close()
+    
+
 
 def generate_road_network(limit=800, size=1000):
     glob.init()
@@ -247,7 +257,7 @@ def treeify(route, tree):
     return treeified
                     
 
-def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_factor, filename):
+def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_factor, filename, tofile=False):
     # num_evacuations = min(num_evacuations,len(threatened_nodes))            
     if num_evacuations > len(threatened_nodes):         
         print 'bad instance: not enough fire'
@@ -341,6 +351,11 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
             outfile.write(' %i %i'%(evacuee, l))
         outfile.write('\n')
     outfile.close()
+    
+    if tofile:
+        # print_evac(evacuation_nodes, population, maximum_rate, safe_zone, fichier):
+        print_full_evac(threatened_nodes[:num_evacuations], population, maximum_rate, safe_zone, '%s.full'%filename)
+    
         
     return escape_routes
     
@@ -593,7 +608,7 @@ if __name__ == '__main__':
         print ' in %s.graph / %s.pos'%(args.file, args.file)
         
         if args.tofile:
-            print_to_file(G, '%s.txt'%args.file)
+            print_graph(G, '%s.txt'%args.file)
 
 
     if args.evacuation:
@@ -713,14 +728,19 @@ if __name__ == '__main__':
           
                 print 'compute escape routes...',
                 sys.stdout.flush()
-            
-                escape_routes = write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, args.firepace, 'data/%s_%i_%i_%i_%i'%(args.file, num_evacuations, SPEED, args.firepace, args.seed))
+        
+                data_file = 'data/%s_%i_%i_%i_%i'%(args.file, num_evacuations, SPEED, args.firepace, args.seed)
+                escape_routes = write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, args.firepace, data_file, args.tofile)
           
                 print ' instance saved in data/%s_%i_%i_%i_%i'%(args.file, num_evacuations, SPEED, args.firepace, args.seed)
           
                 instance_built = True;
                 # print foyer # x,y
                 # print direction # -dx,-dy
+                
+                if args.tofile:
+                    print_graph(G, '%s.full'%data_file)
+                
             else:
                 print 'no instance created!'
         
@@ -741,8 +761,8 @@ if __name__ == '__main__':
     if args.printfire or args.printroad:
         plt.show()
         
-    if args.tofile:
-        print_to_file(G, '%s.dd.txt'%args.file)
+    # if args.tofile:
+    #     print_to_file(G, '%s.dd.txt'%args.file, safe_zone)
 
 
     
