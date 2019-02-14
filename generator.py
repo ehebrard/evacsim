@@ -20,6 +20,9 @@ import cPickle
 import argparse
  
   
+def print_to_file(G, fichier):
+    nx.write_edgelist(G, path=fichier, delimiter=" ")  
+  
 
 def generate_road_network(limit=800, size=1000):
     glob.init()
@@ -529,6 +532,7 @@ if __name__ == '__main__':
     parser.add_argument('--printfire', default=False, action='store_true')
     parser.add_argument('--printroad', default=False, action='store_true')
     parser.add_argument('--printevac', default=False, action='store_true')
+    parser.add_argument('--tofile', default=False, action='store_true')
     
 
     
@@ -583,6 +587,9 @@ if __name__ == '__main__':
         cPickle.dump(pos, open('%s.pos'%args.file, 'w'))
         
         print ' in %s.graph / %s.pos'%(args.file, args.file)
+        
+        if args.tofile:
+            print_to_file(G, '%s.txt'%args.file)
 
 
     if args.evacuation:
@@ -729,6 +736,9 @@ if __name__ == '__main__':
 
     if args.printfire or args.printroad:
         plt.show()
+        
+    if args.tofile:
+        print_to_file(G, '%s.dd.txt'%args.file)
 
 
     
