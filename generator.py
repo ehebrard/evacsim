@@ -280,7 +280,7 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
     for node in threatened_nodes[:num_evacuations]:
         route = treeify( nx.dijkstra_path(G, node, safe_zone, weight='criterion'), escape_routes )
         escape_routes.append( route )
-        # print escape_routes[-1]
+        print escape_routes[-1]
             
     
     town = {}.fromkeys(threatened_nodes[:num_evacuations])
