@@ -28,12 +28,12 @@ def print_graph(G, fichier):
         # print u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']
     ofile.close()
   
-def print_full_evac(evacuation_nodes, population, maximum_rate, safe_zone, fichier):
+def print_full_evac(evacuation_nodes, population, maximum_rate, safe_zone, routes, fichier):
     outfile = open(fichier, 'w+')
-    outfile.write('c [evacuation info] format: header with <num evac nodes> <id of safe node> then one line per evac node with <id of the node> <population> <max rate>\n')
+    outfile.write('c [evacuation info] format: header with <num evac nodes> <id of safe node> then one line per evac node with <id of the node> <population> <max rate> <k> <v1> ... <vk> where v1,...,vk is the escape route for this node\n')
     outfile.write('%i %i\n'%(len(evacuation_nodes), safe_zone))
-    for i,e in enumerate(evacuation_nodes):
-        outfile.write('%i %i %i\n'%(e, population[i], maximum_rate[i]))
+    for i,(e,r) in enumerate(zip(evacuation_nodes,routes)):
+        outfile.write('%i %i %i %i %s\n'%(e, population[i], maximum_rate[i], len(r)-1, ' '.join([str(v) for v in r[1:]])))
     outfile.close()
     
 
@@ -279,8 +279,8 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
     escape_routes = []
     for node in threatened_nodes[:num_evacuations]:
         route = treeify( nx.dijkstra_path(G, node, safe_zone, weight='criterion'), escape_routes )
-        escape_routes.append( route )
-        print escape_routes[-1]
+        escape_routes.append( route ) 
+        # print escape_routes[-1]
             
     
     town = {}.fromkeys(threatened_nodes[:num_evacuations])
@@ -354,7 +354,7 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
     
     if tofile:
         # print_evac(evacuation_nodes, population, maximum_rate, safe_zone, fichier):
-        print_full_evac(threatened_nodes[:num_evacuations], population, maximum_rate, safe_zone, '%s.full'%filename)
+        print_full_evac(threatened_nodes[:num_evacuations], population, maximum_rate, safe_zone, escape_routes, '%s.full'%filename)
     
         
     return escape_routes
