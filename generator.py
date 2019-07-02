@@ -35,8 +35,13 @@ def print_full_evac(evacuation_nodes, population, maximum_rate, safe_zone, route
     for i,(e,r) in enumerate(zip(evacuation_nodes,routes)):
         outfile.write('%i %i %i %i %s\n'%(e, population[i], maximum_rate[i], len(r)-1, ' '.join([str(v) for v in r[1:]])))
     outfile.close()
-    
 
+def print_tree(G, tree, fichier):
+    outfile = open(fichier, 'a')
+    outfile.write('c [tree] format: one line per node with <id of the node> <if_of_the_father> <duedate> <length> <capacity>\n')
+    for u, v in tree.items():
+        outfile.write('%i %i %i %f %f\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
+    outfile.close()
 
 def generate_road_network(limit=800, size=1000):
     glob.init()
@@ -255,9 +260,23 @@ def treeify(route, tree):
                     return treeified
         treeified.append(v)
     return treeified
+
+
+# add a route to the tree
+# route : list of nodes
+# tree : dictionary of nodes (key: node, value: father of the node)
+def add_branch_to_tree(route, tree):
+    node = route[0]
+    for father in route[1:]:
+        if tree.has_key(node):
+            return tree
+        else:
+            tree[node] = father
+            node = father
+
                     
 
-def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_factor, filename, tofile=False):
+def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_factor, filename, tofile=False, writetree=False):
     # num_evacuations = min(num_evacuations,len(threatened_nodes))            
     if num_evacuations > len(threatened_nodes):         
         print 'bad instance: not enough fire'
@@ -355,7 +374,15 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
     if tofile:
         # print_evac(evacuation_nodes, population, maximum_rate, safe_zone, fichier):
         print_full_evac(threatened_nodes[:num_evacuations], population, maximum_rate, safe_zone, escape_routes, '%s.full'%filename)
-    
+
+        if writetree:
+            # create tree
+            tree = {}
+            for route in escape_routes:
+                add_branch_to_tree(route, tree)
+
+            # write tree
+            print_tree(G, tree, '%s.full'%filename)
         
     return escape_routes
     
@@ -552,7 +579,8 @@ if __name__ == '__main__':
     parser.add_argument('--printroad', default=False, action='store_true', help='show the road network')
     parser.add_argument('--printevac', default=False, action='store_true', help='show the evac simulation')
     parser.add_argument('--tofile', default=False, action='store_true', help='print the graph in a readable format')
-    
+
+    parser.add_argument('--writetree', default=False, action='store_true', help='write the tree in the readable file')
 
     
     args = parser.parse_args()
@@ -730,7 +758,7 @@ if __name__ == '__main__':
                 sys.stdout.flush()
         
                 data_file = 'data/%s_%i_%i_%i_%i'%(args.file, num_evacuations, SPEED, args.firepace, args.seed)
-                escape_routes = write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, args.firepace, data_file, args.tofile)
+                escape_routes = write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, args.firepace, data_file, args.tofile, args.writetree)
           
                 print ' instance saved in data/%s_%i_%i_%i_%i'%(args.file, num_evacuations, SPEED, args.firepace, args.seed)
           
