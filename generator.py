@@ -24,7 +24,7 @@ def print_graph(G, fichier):
     ofile = open(fichier, 'a')
     ofile.write('c [graph] format: header with <num nodes> <num edges> then one line per edge <node 1> <node 2> <duedate> <length> <capacity>\n%i %i\n'%(len(G.nodes), len(G.edges)))
     for u,v in G.edges:
-        ofile.write('%i %i %i %f %f\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
+        ofile.write('%i %i %i %f %i\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
         # print u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']
     ofile.close()
   
@@ -36,12 +36,14 @@ def print_full_evac(evacuation_nodes, population, maximum_rate, safe_zone, route
         outfile.write('%i %i %i %i %s\n'%(e, population[i], maximum_rate[i], len(r)-1, ' '.join([str(v) for v in r[1:]])))
     outfile.close()
 
-def print_tree(G, tree, fichier):
-    outfile = open(fichier, 'a')
-    outfile.write('c [tree] format: one line per node with <id of the node> <if_of_the_father> <duedate> <length> <capacity>\n')
-    for u, v in tree.items():
-        outfile.write('%i %i %i %f %f\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
+
+def print_tree(arcs,lengths, capacities, filename):
+    outfile = open(filename, 'a')
+    outfile.write('c [tree] format: one line per node with <id of the node> <id_of_the_father> <duedate> <length> <capacity>\n')
+    for u, v in arcs:
+        outfile.write('%i %i %f %i\n'%(u,v, lengths[(u,v)], capacities[(u,v)]))
     outfile.close()
+
 
 def generate_road_network(limit=800, size=1000):
     glob.init()
@@ -274,6 +276,87 @@ def add_branch_to_tree(route, tree):
             tree[node] = father
             node = father
 
+
+def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time_factor, mode=0):
+    tightest_deadline = {}.fromkeys(range(num_evacuations))
+    relevant_arcs = set([])
+    capacities = {}
+    arcs = {}
+    lengths = {}
+
+    # for each evacuation
+    for evacuee, route in zip(range(num_evacuations), escape_routes):
+        tightest_deadline[evacuee] = sys.maxint
+        # deadline_arc = None
+        l = 0
+        # for each arc of the evacuation route
+        for u, v in zip(route[:-1], route[1:]):
+
+            # check if the due date of the arc reduces the evacuation deadline
+            if G.edges[u, v]['duedate'] != sys.maxint:
+                if tightest_deadline[evacuee] > (time_factor * G.edges[u, v]['duedate'] - l):
+                    tightest_deadline[evacuee] = (time_factor * G.edges[u, v]['duedate'] - l)
+                    # deadline_arc = (u,v)
+
+            # add the evacuation in the evacuation list of the arc (u,v)
+            # (evacuee,l) = (number_evacuation, offset_from_the_evac_node)
+            if not arcs.has_key((u, v)):
+                arcs[(u, v)] = [(evacuee, l)]
+                capacities[(u, v)] = -1
+            else:
+                arcs[(u, v)].append((evacuee, l))
+            # update the offset
+            l += int(G.edges[u, v]['distance'] / SPEED)
+            # relevant_arcs.add( deadline_arc )
+
+    for route, evacuee in zip(escape_routes, range(num_evacuations)):
+        min_Q = sys.maxint
+        N = len(arcs[(route[-2], route[-1])])
+        arc_of = [[] for i in range(N)]
+
+        # add the arc in one of the list of the dictionary arc_of
+        # the arcs of a same list have the same number of evacuations crossing them
+        # so these arcs belongs to the same branch of the evacuation tree
+        for u, v in zip(route[:-1], route[1:]):
+            arc_of[len(arcs[(u, v)]) - 1].append((G.edges[u, v]['capacity'], u, v))
+        # for each list of arc_of, we add the arc with the smallest capacity to the relevant arc list
+        # if this capacity is smaller than the capacity of the relevant arcs already added for this route
+        for n in reversed(range(N)):
+            if len(arc_of[n]) > 0:
+                # if mode 0, we keep only the relevant arc
+                if mode == 0:
+                    Q, u, v = min(arc_of[n])
+                    if Q < min_Q and capacities[(u, v)] == -1:
+                        min_Q = Q
+                        # if at least two evacuations use this part of the branch
+                        if n != 0:
+                            relevant_arcs.add((u, v))
+                            capacities[(u, v)] = Q
+                        maximum_rate[evacuee] = min(maximum_rate[evacuee], Q)
+                else:
+                    # concatenate the arcs without intersection between them
+                    # capacity of the new arc = minimal capacity
+                    Q = min(arc_of[n])[0]
+                    u = arc_of[n][0][1]
+                    v = arc_of[n][-1][2]
+
+                    relevant_arcs.add((u, v))
+
+                    # compute the length of the new arc
+                    lengths[(u,v)] = 0
+                    for _capacity, u_aux, v_aux in arc_of[n]:
+                        lengths[(u,v)] += G.edges[(u_aux, v_aux)]['distance']
+
+                    # the capacities are decreasing in the tree
+                    if Q > min_Q:
+                        Q = min_Q
+                    else:
+                        min_Q = Q
+
+                    capacities[(u, v)] = Q
+                    maximum_rate[evacuee] = min(maximum_rate[evacuee], Q)
+
+    return tightest_deadline, maximum_rate, arcs, relevant_arcs, capacities, lengths
                     
 
 def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_factor, filename, tofile=False, writetree=False):
@@ -312,46 +395,9 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
     for evacuee in range(num_evacuations):
         population[evacuee] = random_population()
         maximum_rate[evacuee] = population[evacuee]
-        
-    
-    tightest_deadline = {}.fromkeys(range(num_evacuations))
-    relevant_arcs = set([])
-    capacities = {}
-    arcs = {}
-    for evacuee, route in zip(range(num_evacuations), escape_routes):
-        tightest_deadline[evacuee] = sys.maxint
-        # deadline_arc = None
-        l = 0
-        for u,v in zip(route[:-1], route[1:]):
-            if G.edges[u,v]['duedate'] != sys.maxint:                    
-                if tightest_deadline[evacuee] > (time_factor * G.edges[u,v]['duedate'] - l):
-                    tightest_deadline[evacuee] = (time_factor * G.edges[u,v]['duedate'] - l)
-                    # deadline_arc = (u,v)
-            if not arcs.has_key((u,v)):
-                arcs[(u,v)] = [(evacuee,l)]
-                capacities[(u,v)] = -1
-            else:
-                arcs[(u,v)].append((evacuee,l))
-            l += int(G.edges[u,v]['distance'] / SPEED) 
-        # relevant_arcs.add( deadline_arc )
-        
-                
-    for route,evacuee in zip(escape_routes, range(num_evacuations)):
-        min_Q = sys.maxint
-        N = len(arcs[(route[-2], route[-1])])
-        arc_of = [[] for i in range(N)]
-          
-        for u,v in zip(route[:-1], route[1:]):
-            arc_of[len(arcs[(u,v)])-1].append((G.edges[u,v]['capacity'],u,v))
-        for n in reversed(range(N)):
-            if len(arc_of[n]) > 0:
-                Q,u,v = min(arc_of[n])
-                if Q < min_Q and capacities[(u,v)] == -1:
-                    min_Q = Q
-                    if n != 0:
-                        relevant_arcs.add((u,v))
-                        capacities[(u,v)] = Q
-                    maximum_rate[evacuee] = min(maximum_rate[evacuee], Q)
+
+    mode = 0
+    tightest_deadline, maximum_rate, arcs, relevant_arcs, capacities, lengths = reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time_factor, mode)
 
        
     outfile = open('%s.evac'%(filename), 'w')
@@ -376,13 +422,15 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
         print_full_evac(threatened_nodes[:num_evacuations], population, maximum_rate, safe_zone, escape_routes, '%s.full'%filename)
 
         if writetree:
-            # create tree
-            tree = {}
-            for route in escape_routes:
-                add_branch_to_tree(route, tree)
+            # # create tree
+            # tree = {}
+            # for route in escape_routes:
+            #     add_branch_to_tree(route, tree)
 
-            # write tree
-            print_tree(G, tree, '%s.full'%filename)
+            mode = 1
+            tightest_deadline, maximum_rate, arcs, relevant_arcs, capacities, lengths = reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time_factor, mode)
+
+            print_tree(relevant_arcs, lengths, capacities, '%s.full'%filename)
         
     return escape_routes
     
@@ -464,22 +512,22 @@ def build_roads(G, pos):
                 nearest_corner[source] = corner                
                 
     for e in G.edges:
-        G.edges[e]['capacity'] = (secondary_road_flowrate *  (1 + G.edges[e]['distance']/size))
+        G.edges[e]['capacity'] = int(secondary_road_flowrate *  (1 + G.edges[e]['distance']/size))
         G.edges[e]['duedate'] = sys.maxint
         G.edges[e]['color'] = 'black'
         # print e, G.edges[e]['distance'], G.edges[e]['capacity']
         
     for road in nationales:
         for e in zip(road[:-1], road[1:]):
-            G.edges[e]['capacity'] = (primary_road_flowrate *  (1 + G.edges[e]['distance']/size))
+            G.edges[e]['capacity'] = int(primary_road_flowrate *  (1 + G.edges[e]['distance']/size))
             G.edges[e]['color'] = 'green'
             
     for source in [first, second, third]:
         for e in zip(highway[source][center][:-1], highway[source][center][1:]):
-            G.edges[e]['capacity'] = (highway_flowrate * (1 + G.edges[e]['distance']/size))
+            G.edges[e]['capacity'] = int(highway_flowrate * (1 + G.edges[e]['distance']/size))
             G.edges[e]['color'] = 'blue'
         for e in zip(highway[source][nearest_corner[source]][:-1], highway[source][nearest_corner[source]][1:]):
-            G.edges[e]['capacity'] = (highway_flowrate * (1 + G.edges[e]['distance']/size))
+            G.edges[e]['capacity'] = int(highway_flowrate * (1 + G.edges[e]['distance']/size))
             G.edges[e]['color'] = 'blue'
 
 
@@ -564,10 +612,10 @@ if __name__ == '__main__':
     parser.add_argument('--flowfactor',type=int,default=5,help='Priority given to faster edges in evacuation: <int> default=5')
     parser.add_argument('--increaseflow',type=float,default=1.0,help='Multiplier applied to flow rates: <float> default=1')
     
-    parser.add_argument('--intensity',type=float,default=.25,help='Intensity of the fire: [0,1] default=.25')
-    parser.add_argument('--step',type=int,default=30,help='Granularity of the fire areas (x50m): <int> default=30')
-    parser.add_argument('--num_iter',type=int,default=65,help='Number of wildfire expention steps: <int> default=65')
-    parser.add_argument('--firepace',type=int,default=2,help='Time between wildfire expention (in minutes): <int> default=5')
+    parser.add_argument('--intensity',type=float,default=.5,help='Intensity of the fire: [0,1] default=.25')
+    parser.add_argument('--step',type=int,default=10,help='Granularity of the fire areas (x50m): <int> default=30')
+    parser.add_argument('--num_iter',type=int,default=100,help='Number of wildfire expention steps: <int> default=65')
+    parser.add_argument('--firepace',type=int,default=5,help='Time between wildfire expention (in minutes): <int> default=5')
     
     
     parser.add_argument('--num_evacuations',type=int,default=10,help='Number of evacuation zones: <int> default=10')
