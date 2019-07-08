@@ -24,7 +24,7 @@ def print_graph(G, fichier):
     ofile = open(fichier, 'a')
     ofile.write('c [graph] format: header with <num nodes> <num edges> then one line per edge <node 1> <node 2> <duedate> <length> <capacity>\n%i %i\n'%(len(G.nodes), len(G.edges)))
     for u,v in G.edges:
-        ofile.write('%i %i %i %f %i\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
+        ofile.write('%i %i %i %i %i\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
         # print u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']
     ofile.close()
   
@@ -37,11 +37,12 @@ def print_full_evac(evacuation_nodes, population, maximum_rate, safe_zone, route
     outfile.close()
 
 
-def print_tree(arcs,lengths, capacities, filename):
+def print_tree(arcs, lengths, capacities, filename):
     outfile = open(filename, 'a')
-    outfile.write('c [tree] format: one line per node with <id of the node> <id_of_the_father> <duedate> <length> <capacity>\n')
+    outfile.write('c [evacuation tree] format: header with <num edges> then one line per edge with <id of the son node> <id of the father node> <length> <capacity>\n')
+    outfile.write('%i\n'%len(arcs))
     for u, v in arcs:
-        outfile.write('%i %i %f %i\n'%(u,v, lengths[(u,v)], capacities[(u,v)]))
+        outfile.write('%i %i %i %i\n'%(u, v, lengths[(u,v)], capacities[(u,v)]))
     outfile.close()
 
 
@@ -345,7 +346,7 @@ def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time
                     # compute the length of the new arc
                     lengths[(u,v)] = 0
                     for _capacity, u_aux, v_aux in arc_of[n]:
-                        lengths[(u,v)] += G.edges[(u_aux, v_aux)]['distance']
+                        lengths[(u,v)] += math.ceil(G.edges[(u_aux, v_aux)]['distance'])
 
                     # the capacities are decreasing in the tree
                     if Q > min_Q:
@@ -456,6 +457,7 @@ SPEED = 25 # speed in distance unit / time unit in the graph (50m / 1')
 
 
 def build_roads(G, pos):
+
     nationales = []
     for r in range(1,size,size/grid):
         p1 = find_closest(pos, r, 0)
@@ -512,6 +514,8 @@ def build_roads(G, pos):
                 nearest_corner[source] = corner                
                 
     for e in G.edges:
+        G.edges[e]['distance'] = math.ceil(G.edges[e]['distance'])
+
         G.edges[e]['capacity'] = int(secondary_road_flowrate *  (1 + G.edges[e]['distance']/size))
         G.edges[e]['duedate'] = sys.maxint
         G.edges[e]['color'] = 'black'
@@ -696,6 +700,10 @@ if __name__ == '__main__':
         pos = cPickle.load(open('%s.pos'%args.file, 'r'))
     
         nodes = list(G.nodes)
+
+        for e in G.edges:
+            G.edges[e]['distance'] = math.ceil(G.edges[e]['distance'])
+            print G.edges[e]['distance']
     
         print ' %i nodes, %i edges'%(len(nodes), len(G.edges))
     
@@ -839,10 +847,3 @@ if __name__ == '__main__':
         
     # if args.tofile:
     #     print_to_file(G, '%s.dd.txt'%args.file, safe_zone)
-
-
-    
-    
-
-
-
