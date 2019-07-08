@@ -327,13 +327,16 @@ def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time
                 # if mode 0, we keep only the relevant arc
                 if mode == 0:
                     Q, u, v = min(arc_of[n])
-                    if Q < min_Q and capacities[(u, v)] == -1:
+                    if Q < min_Q:
                         min_Q = Q
-                        # if at least two evacuations use this part of the branch
-                        if n != 0:
-                            relevant_arcs.add((u, v))
-                            capacities[(u, v)] = Q
                         maximum_rate[evacuee] = min(maximum_rate[evacuee], Q)
+                        # if the arc has not already been added
+                        if capacities[(u, v)] == -1:
+                            # if at least two evacuations use this part of the branch
+                            if n != 0:
+                                relevant_arcs.add((u, v))
+                                capacities[(u, v)] = Q
+
                 else:
                     # concatenate the arcs without intersection between them
                     # capacity of the new arc = minimal capacity
