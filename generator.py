@@ -346,7 +346,7 @@ def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time
                     # compute the length of the new arc
                     lengths[(u,v)] = 0
                     for _capacity, u_aux, v_aux in arc_of[n]:
-                        lengths[(u,v)] += math.ceil(G.edges[(u_aux, v_aux)]['distance'])
+                        lengths[(u,v)] += G.edges[(u_aux, v_aux)]['distance']
 
                     # the capacities are decreasing in the tree
                     if Q > min_Q:
@@ -514,8 +514,6 @@ def build_roads(G, pos):
                 nearest_corner[source] = corner                
                 
     for e in G.edges:
-        G.edges[e]['distance'] = math.ceil(G.edges[e]['distance'])
-
         G.edges[e]['capacity'] = int(secondary_road_flowrate *  (1 + G.edges[e]['distance']/size))
         G.edges[e]['duedate'] = sys.maxint
         G.edges[e]['color'] = 'black'
@@ -701,9 +699,9 @@ if __name__ == '__main__':
     
         nodes = list(G.nodes)
 
+        # round up the edge length
         for e in G.edges:
             G.edges[e]['distance'] = math.ceil(G.edges[e]['distance'])
-            print G.edges[e]['distance']
     
         print ' %i nodes, %i edges'%(len(nodes), len(G.edges))
     
