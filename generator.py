@@ -617,9 +617,9 @@ if __name__ == '__main__':
     parser.add_argument('--flowfactor',type=int,default=5,help='Priority given to faster edges in evacuation: <int> default=5')
     parser.add_argument('--increaseflow',type=float,default=1.0,help='Multiplier applied to flow rates: <float> default=1')
     
-    parser.add_argument('--intensity',type=float,default=.5,help='Intensity of the fire: [0,1] default=.25')
-    parser.add_argument('--step',type=int,default=10,help='Granularity of the fire areas (x50m): <int> default=30')
-    parser.add_argument('--num_iter',type=int,default=100,help='Number of wildfire expention steps: <int> default=65')
+    parser.add_argument('--intensity',type=float,default=.5,help='Intensity of the fire: [0,1] default=.5')
+    parser.add_argument('--step',type=int,default=10,help='Granularity of the fire areas (x50m): <int> default=10')
+    parser.add_argument('--num_iter',type=int,default=100,help='Number of wildfire expansion steps: <int> default=100')
     parser.add_argument('--firepace',type=int,default=5,help='Time between wildfire expention (in minutes): <int> default=5')
     
     
