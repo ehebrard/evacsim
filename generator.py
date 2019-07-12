@@ -297,8 +297,8 @@ def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time
 
             # check if the due date of the arc reduces the evacuation deadline
             if G.edges[u, v]['duedate'] != sys.maxint:
-                if tightest_deadline[evacuee] > (time_factor * G.edges[u, v]['duedate'] - l):
-                    tightest_deadline[evacuee] = (time_factor * G.edges[u, v]['duedate'] - l)
+                if tightest_deadline[evacuee] > (G.edges[u, v]['duedate'] - l - math.ceil(G.edges[u, v]['distance'] / SPEED)):
+                    tightest_deadline[evacuee] = (G.edges[u, v]['duedate'] - l - math.ceil(G.edges[u, v]['distance'] / SPEED))
                     # deadline_arc = (u,v)
 
             # add the evacuation in the evacuation list of the arc (u,v)
@@ -309,7 +309,7 @@ def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time
             else:
                 arcs[(u, v)].append((evacuee, l))
             # update the offset
-            l += int(G.edges[u, v]['distance'] / SPEED)
+            l += math.ceil(G.edges[u, v]['distance'] / SPEED)
             # relevant_arcs.add( deadline_arc )
 
     for route, evacuee in zip(escape_routes, range(num_evacuations)):
@@ -643,6 +643,7 @@ if __name__ == '__main__':
     
     # wildfire stuff
     step = args.step #(x 50m = 1,5km)
+    firepace = args.firepace
     intensity = args.intensity
     num_iter = args.num_iter
     
@@ -760,7 +761,7 @@ if __name__ == '__main__':
                                     # G.remove_node(v)
                                     threatened.add(v)
                                     for u in G[v]:
-                                        G.edges[u,v]['duedate'] = date
+                                        G.edges[u,v]['duedate'] = date * firepace
                                     # safe.remove(v)
                                     break;
 
@@ -770,7 +771,7 @@ if __name__ == '__main__':
                             for x,y in vfire:
                                 if intersect( x, x+step, y, y+step, pos[u], pos[v] ):
                                     # G.remove_edge(u,v)
-                                    G.edges[u,v]['duedate'] = date
+                                    G.edges[u,v]['duedate'] = date * firepace
                                     break;
                                 
                     # print_fire(G, pos, fire, visible)
@@ -797,6 +798,8 @@ if __name__ == '__main__':
                     d = G.edges[e]['duedate']
                     if d == sys.maxint :
                         d = num_iter
+                    else :
+                        d = d / firepace
             
                     crit += float(date_factor*((num_iter-d)))/float(num_iter)  
                     ccrit = float(max_capacity-G.edges[e]['capacity'])/float(max_capacity)
@@ -812,7 +815,7 @@ if __name__ == '__main__':
                 sys.stdout.flush()
         
                 data_file = 'data/%s_%i_%i_%i_%i'%(args.file, num_evacuations, SPEED, args.firepace, args.seed)
-                escape_routes = write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, args.firepace, data_file, args.tofile, args.writetree)
+                escape_routes = write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, firepace, data_file, args.tofile, args.writetree)
           
                 print ' instance saved in data/%s_%i_%i_%i_%i'%(args.file, num_evacuations, SPEED, args.firepace, args.seed)
           
