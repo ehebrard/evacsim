@@ -24,7 +24,7 @@ def print_graph(G, fichier):
     ofile = open(fichier, 'a')
     ofile.write('c [graph] format: header with <num nodes> <num edges> then one line per edge <node 1> <node 2> <duedate> <length> <capacity>\n%i %i\n'%(len(G.nodes), len(G.edges)))
     for u,v in G.edges:
-        ofile.write('%i %i %i %i %i\n'%(u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']))
+        ofile.write('%i %i %i %i %i\n'%(u,v, G.edges[u,v]['duedate'], math.ceil(G.edges[u,v]['distance']/SPEED), G.edges[u,v]['capacity']))
         # print u,v, G.edges[u,v]['duedate'], G.edges[u,v]['distance'], G.edges[u,v]['capacity']
     ofile.close()
   
@@ -44,7 +44,7 @@ def print_tree(arcs, lengths, capacities, filename):
     outfile.write('c [evacuation tree] format: header with <num edges> then one line per edge with <id of the son node> <id of the father node> <length> <capacity>\n')
     outfile.write('%i\n'%len(arcs))
     for u, v in arcs:
-        outfile.write('%i %i %i %i\n'%(u, v, lengths[(u,v)], capacities[(u,v)]))
+        outfile.write('%i %i %i %i\n'%(u, v, math.ceil(lengths[(u,v)]/SPEED), capacities[(u,v)]))
     outfile.close()
 
 
@@ -700,10 +700,6 @@ if __name__ == '__main__':
     
         nodes = list(G.nodes)
 
-        # round up the edge length
-        for e in G.edges:
-            G.edges[e]['distance'] = math.ceil(G.edges[e]['distance'])
-    
         print ' %i nodes, %i edges'%(len(nodes), len(G.edges))
     
         instance_built = False
