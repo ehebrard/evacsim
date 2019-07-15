@@ -506,13 +506,7 @@ def build_roads(G, pos):
         if dist < smallest:
             smallest = dist
             center = node
-         
-    for source in [first, second, third]:
-        nearest_corner[source] = no
-        for corner in [so, ne, se]:
-            if distance(pos[source], pos[corner]) < distance(pos[source], pos[nearest_corner[source]]):
-                nearest_corner[source] = corner                
-                
+
     for e in G.edges:
         G.edges[e]['capacity'] = int(secondary_road_flowrate *  (1 + G.edges[e]['distance']/size))
         G.edges[e]['duedate'] = sys.maxint
@@ -523,14 +517,23 @@ def build_roads(G, pos):
         for e in zip(road[:-1], road[1:]):
             G.edges[e]['capacity'] = int(primary_road_flowrate *  (1 + G.edges[e]['distance']/size))
             G.edges[e]['color'] = 'green'
-            
-    for source in [first, second, third]:
-        for e in zip(highway[source][center][:-1], highway[source][center][1:]):
-            G.edges[e]['capacity'] = int(highway_flowrate * (1 + G.edges[e]['distance']/size))
-            G.edges[e]['color'] = 'blue'
-        for e in zip(highway[source][nearest_corner[source]][:-1], highway[source][nearest_corner[source]][1:]):
-            G.edges[e]['capacity'] = int(highway_flowrate * (1 + G.edges[e]['distance']/size))
-            G.edges[e]['color'] = 'blue'
+
+    # highways are created only if there are enough nodes
+    if limit > 99:
+
+        for source in [first, second, third]:
+            nearest_corner[source] = no
+            for corner in [so, ne, se]:
+                if distance(pos[source], pos[corner]) < distance(pos[source], pos[nearest_corner[source]]):
+                    nearest_corner[source] = corner
+
+        for source in [first, second, third]:
+            for e in zip(highway[source][center][:-1], highway[source][center][1:]):
+                G.edges[e]['capacity'] = int(highway_flowrate * (1 + G.edges[e]['distance']/size))
+                G.edges[e]['color'] = 'blue'
+            for e in zip(highway[source][nearest_corner[source]][:-1], highway[source][nearest_corner[source]][1:]):
+                G.edges[e]['capacity'] = int(highway_flowrate * (1 + G.edges[e]['distance']/size))
+                G.edges[e]['color'] = 'blue'
 
 
 def print_fire(G, pos, fire, visible):
@@ -632,7 +635,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--writetree', default=False, action='store_true', help='write the tree in the readable file')
 
-    
+
     args = parser.parse_args()
 
     # Road network stuff
@@ -665,12 +668,13 @@ if __name__ == '__main__':
         
         print 'generate roads...',
         sys.stdout.flush()
-        
+
         G, pos = generate_road_network(limit=limit, size=size)
         
         print ' %i nodes, %i edges'%(len(G.nodes), len(G.edges))
-        
-        print 'built highways...',
+
+        if limit > 99:
+            print 'built highways...',
         sys.stdout.flush()
         
         build_roads(G, pos)
