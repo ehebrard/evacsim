@@ -44,7 +44,7 @@ def print_tree(arcs, lengths, capacities, filename):
     outfile.write('c [evacuation tree] format: header with <num edges> then one line per edge with <id of the son node> <id of the father node> <length> <capacity>\n')
     outfile.write('%i\n'%len(arcs))
     for u, v in arcs:
-        outfile.write('%i %i %i %i\n'%(u, v, math.ceil(lengths[(u,v)]/SPEED), capacities[(u,v)]))
+        outfile.write('%i %i %i %i\n'%(u, v, lengths[(u,v)], capacities[(u,v)]))
     outfile.close()
 
 
@@ -351,7 +351,7 @@ def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time
                     # compute the length of the new arc
                     lengths[(u,v)] = 0
                     for _capacity, u_aux, v_aux in arc_of[n]:
-                        lengths[(u,v)] += G.edges[(u_aux, v_aux)]['distance']
+                        lengths[(u,v)] += math.ceil(G.edges[(u_aux, v_aux)]['distance']/SPEED)
 
                     # the capacities are decreasing in the tree
                     if Q > min_Q:
