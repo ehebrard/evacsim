@@ -267,19 +267,6 @@ def treeify(route, tree):
     return treeified
 
 
-# add a route to the tree
-# route : list of nodes
-# tree : dictionary of nodes (key: node, value: father of the node)
-def add_branch_to_tree(route, tree):
-    node = route[0]
-    for father in route[1:]:
-        if tree.has_key(node):
-            return tree
-        else:
-            tree[node] = father
-            node = father
-
-
 def reduce_evacuation_tree(G, num_evacuations, escape_routes, maximum_rate, time_factor, mode=0):
     tightest_deadline = {}.fromkeys(range(num_evacuations))
     relevant_arcs = set([])
@@ -383,14 +370,46 @@ def write_evacuation_plan(G, threatened_nodes, safe_zone, num_evacuations, time_
         
     # # print safe_nodes
     # safe_zone = safe_nodes[random.randint(0, len(safe_nodes))]
-    
+
+    # build the evac tree cheeking each evac node is a leaf (ie not a transit node)
+    # if it is not the case, the evac node is replaced by a new evac node
+    transit_nodes = []
     escape_routes = []
-    for node in threatened_nodes[:num_evacuations]:
-        route = treeify( nx.dijkstra_path(G, node, safe_zone, weight='criterion'), escape_routes )
-        escape_routes.append( route ) 
+    for i in range(num_evacuations):
+        l = 0
+        leaf = False
+        while not leaf:
+            m = 0
+            node = threatened_nodes[i]
+            # if the selected evacuation node is already a transit node
+            # then choose an other node
+            while node in transit_nodes:
+                j = random.randint(i, len(threatened_nodes) - 1)
+                threatened_nodes[i] = threatened_nodes[j]
+                threatened_nodes[j] = node
+                node = threatened_nodes[i]
+                m += 1
+                assert m < len(threatened_nodes)*10
+            route = treeify(nx.dijkstra_path(G, node, safe_zone, weight='criterion'), escape_routes)
+            # check if an other evac node is not on the route
+            leaf = True
+            k = 0
+            while leaf and k < len(threatened_nodes[:i]):
+                # if a transit node is an evac node
+                # then replace this evac node by the current node
+                if threatened_nodes[k] in route:
+                    threatened_nodes[k] = node
+                    escape_routes[k] = route
+                    transit_nodes.extend(route)
+                    leaf = False
+                k += 1
+            l += 1
+            assert l < len(threatened_nodes)*10
+
+        escape_routes.append(route)
+        transit_nodes.extend(route)
         # print escape_routes[-1]
-            
-    
+
     town = {}.fromkeys(threatened_nodes[:num_evacuations])
     
     for node in threatened_nodes[:num_evacuations]:
